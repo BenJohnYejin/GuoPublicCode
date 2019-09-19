@@ -1,0 +1,159 @@
+public class GetEulerAngle_Yijie_Hubu {
+	double q0,q1,q2,q3;
+	double  pitch , roll , yaw ;
+	double PI = Math.PI;
+	Scanner scanner = new Scanner(System.in);
+	double halfT = 0.02/2;
+	GetEulerAngle angle = new GetEulerAngle();
+	double norm ; 
+	
+	public void test() {
+		System.out.println("输入航向角：");
+		yaw = scanner.nextDouble();
+		yaw = yaw*PI/180;
+		roll = 0;
+		pitch = 0;		
+	}
+	public void initAngle() {
+		 
+			//初始化四元素
+			q0 = Math.cos(yaw)*Math.cos(pitch)*Math.cos(roll)+Math.sin(yaw)*Math.sin(pitch)*Math.sin(roll);
+			q1 = Math.cos(yaw)*Math.cos(pitch)*Math.sin(roll)-Math.sin(yaw)*Math.sin(pitch)*Math.cos(roll);
+			q2 = Math.cos(yaw)*Math.sin(pitch)*Math.cos(roll)+Math.sin(yaw)*Math.cos(pitch)*Math.sin(roll);
+			q3 = -Math.cos(yaw)*Math.sin(pitch)*Math.sin(roll)+Math.sin(yaw)*Math.cos(pitch)*Math.cos(roll);
+			System.out.println(q0+" "+q1+" "+q2+" "+q3);
+
+	}
+
+	public void RungeKutta() {
+		try {
+			FileReader fileReader =new FileReader(new File("D:\\QQ系列\\QQ\\QQ文档\\704664122\\FileRecv\\t11.txt"));
+			BufferedReader bufferedReader =new  BufferedReader(fileReader);
+			FileWriter writer = new FileWriter(new File("D:\\一阶修正.txt"));
+			BufferedWriter bufferedWriter = new BufferedWriter(writer);
+			String line = null ;
+			int i = 0;
+			//宏定义
+			double kp = 1;
+			double ki = 0.001;
+			double ex = 0 , g_bias0 = 0;
+			double ey = 0 , g_bias1 = 0;
+			double ez = 0 , g_bias2 = 0;
+			
+			while((line = bufferedReader.readLine())!=null) {
+				String [] s = line.split(",");				
+				if(s[0].equals("时间/s")) {
+					continue;
+				}			
+				double gx = Double.parseDouble(s[4]) ;
+				double gy = Double.parseDouble(s[5]) ;
+				double gz = Double.parseDouble(s[6]) ;	
+				double ax = Double.parseDouble(s[1]) ;
+				double ay = Double.parseDouble(s[2]) ;
+				double az = Double.parseDouble(s[3]) ;		
+				
+				if(ax==0&&ay==0&&az==0) {
+					continue;
+				}
+				//加速度数据归一化
+				norm = ax*ax+ay*ay+az*az;
+				ax = ax/norm;
+				ay = ay/norm;
+				az = az/norm;
+				double vx = 2*(q1*q3-q0*q2) ;
+				double vy = 2*(q0*q1+q2*q3) ;
+				double vz = q0*q0 - q1*q1- q2*q2 +q3*q3 ;
+				//获得叉乘误差
+				ex =   ay *vz - az*vy;
+				ey =   az *vx - ax*vz;
+				ez =   ax *vy - ay*vx;
+				//对叉乘误差积分
+				g_bias0 = g_bias0 + ki*ex;
+				g_bias1 = g_bias1 + ki*ey;
+				g_bias2 = g_bias2 + ki*ez;
+				gx = gx + g_bias0;
+				gy = gy + g_bias1;
+				gz = gz + g_bias2;
+				//修正
+				gx = gx+kp*ex;
+				gy = gy+kp*ey;
+				gz = gz+kp*ez;
+				
+				//更新四元数 一阶龙格
+				q0 = q0 + (-gx*q1-gy*q2-gz*q3)*halfT;
+				q1 = q1 + (gx*q0-gy*q3+gz*q2)*halfT;
+				q2 = q2 + (gx*q3+gy*q0-gz*q1)*halfT;
+				q3 = q3 + (-gx*q2+gy*q1+gz*q0)*halfT;				
+				//规范化四元数
+				norm = q0*q0+q1*q1+q2*q2+q3*q3;
+				norm = Math.sqrt(norm);
+				q0 = q0/norm ;
+				q1 = q1/norm ;
+				q2 = q2/norm ;
+				q3 = q3/norm ;				
+				//转换为欧拉角
+				//俯仰角
+				pitch = Math.asin(2*(q2*q3+q0*q1))*57.3;				
+				//横滚角
+				roll = Math.atan2(-(2*(q1*q3-q0*q2)),(1-2*(q1*q1+q2*q2)));
+				if(roll>0) {
+					if((1-2*(q1*q1+q2*q2))<0) {
+						roll = roll - PI;
+					}
+				}
+				if(roll<0) {
+					if((1-2*(q1*q1+q2*q2))<0) {
+						roll = roll + PI;
+					}
+				}
+				roll = roll*57.3;
+				//航向角
+				yaw = Math.atan2((2*(q1*q2-q0*q3)),(1-2*(q1*q1+q3*q3)));
+				if(Math.abs(1-2*(q1*q1+q3*q3))<0.01) {
+					if(2*(q1*q2-q0*q3)>0) {
+						yaw = PI/2;
+					}else {
+						yaw =-PI/2;
+					}
+				}
+				else if(1-2*(q1*q1+q3*q3)>0) {
+					yaw = Math.atan2((2*(q1*q2-q0*q3)),(1-2*(q1*q1+q3*q3)));
+				}
+				else {					
+					if(2*(q1*q2-q0*q3)>0) {
+						yaw = Math.atan2((2*(q1*q2-q0*q3)),(1-2*(q1*q1+q3*q3)))+PI;
+					}else {
+						yaw = Math.atan2((2*(q1*q2-q0*q3)),(1-2*(q1*q1+q3*q3)))-PI;
+					}
+				
+				}	
+				if(yaw>PI) {
+					yaw = yaw - PI;
+				}
+				if(yaw<-PI) {
+					yaw = yaw + PI;
+				}
+				yaw = yaw*57.3;
+				line ="\t"+pitch +"\t"+roll+"\t"+yaw+"\r\n";
+				bufferedWriter.write(i+line);			
+				i = i +1 ;				
+				//航向矫正
+				
+			}
+			bufferedWriter.close();
+			bufferedReader.close();
+		
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+	}
+	
+	  public static void main(String[] args) { 
+		  GetEulerAngle_Yijie_Hubu s = new GetEulerAngle_Yijie_Hubu(); 
+		  s.test();
+		  s.initAngle();
+		  s.RungeKutta();
+	  
+	  }
