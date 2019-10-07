@@ -1,7 +1,3 @@
-# GuoPublicCode
-为郭家军公共代码库  2019/9/18
-#请各个成员新建一个分支，并将需要上传的文件放入其中
-下面为已有成员列表
-1. BenJohnYeJin
-2. Dong
-3. Liu
+# liu's Code
+# java
+航向计算  四元数法解算欧拉角
