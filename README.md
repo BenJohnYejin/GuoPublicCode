@@ -17,4 +17,5 @@
 5. Zai
 6. ShengFangYuan
 ## 目前搜索到的室内定位开源相关的项目网址为
-1. 
+1. https://github.com/rodralez/NaveGo
+2. 
